@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plus2 Services - Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Plus Jakarta Sans', sans-serif; }
+        h1, h2 { font-family: 'DM Serif Display', serif; }
+
+        :root {
+            --brand: #0f766e;
+            --brand-light: #14b8a6;
+            --brand-dark: #0d5752;
+            --accent: #f59e0b;
+            --surface: #f8fafb;
+        }
+
+        body { background: var(--surface); }
+
+        .fade-in { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: var(--brand-light); border-radius: 4px; }
+
+        .brand-btn {
+            background: var(--brand);
+            color: white;
+            transition: background 0.2s;
+        }
+        .brand-btn:hover { background: var(--brand-dark); }
+
+        .item-row input[type="number"] {
+            width: 70px;
+            text-align: center;
+        }
+
+
+        .status-badge { border-radius: 9999px; font-size: 0.72rem; font-weight: 600; padding: 2px 10px; }
+        .status-received { background: #dbeafe; color: #1d4ed8; }
+        .status-washing { background: #e0f2fe; color: #0369a1; }
+        .status-ironing { background: #fef3c7; color: #b45309; }
+        .status-ready { background: #dcfce7; color: #15803d; }
+        .status-delivered { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .status-unpaid { background: #fee2e2; color: #b91c1c; }
+
+        @media print {
+            /* Hide absolutely everything */
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body * {
+                visibility: hidden !important;
+            }
+            /* Show only the receipt content box */
+            #receipt-modal .bg-white,
+            #receipt-modal .bg-white * {
+                visibility: visible !important;
+            }
+            /* Position it top-left, no modal overlay */
+            #receipt-modal {
+                position: fixed !important;
+                inset: 0 !important;
+                background: none !important;
+                display: flex !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #receipt-modal .bg-white {
+                position: relative !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                width: 80mm !important;      /* standard receipt width */
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 12px !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            /* Hide the print/close buttons on the receipt */
+            .no-print {
+                display: none !important;
+                visibility: hidden !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+<!-- Navigation -->
+<nav class="bg-white shadow-md sticky top-0 z-40 border-b border-teal-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="showScreen('dashboard')">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:var(--brand)">
+                    <i class="fas fa-tshirt text-white text-base"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900 leading-tight" style="font-family:'DM Serif Display',serif">Plus2 Services</h1>
+                    <p class="text-xs text-gray-500">Laundry & Dry Cleaning – Kano, Nigeria</p>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center space-x-2">
+                <button onclick="showScreen('new-order')" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-50 hover:text-teal-700 transition">
+                    <i class="fas fa-plus mr-1"></i>New Order
+                </button>
+                <button onclick="showScreen('orders')" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-50 hover:text-teal-700 transition">
+                    <i class="fas fa-list mr-1"></i>Orders
+                </button>
+                <button onclick="showScreen('dashboard')" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-teal-50 hover:text-teal-700 transition">
+                    <i class="fas fa-chart-line mr-1"></i>Dashboard
+                </button>
+                <button onclick="showScreen('customer-view')" class="px-3 py-2 rounded-md text-sm font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition">
+                    <i class="fas fa-user mr-1"></i>Customer View
+                </button>
+            </div>
+            <div class="flex items-center md:hidden">
+                <button onclick="toggleMobileMenu()" class="p-2 text-gray-500">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-t px-3 pb-3 pt-2 space-y-1">
+        <button onclick="showScreen('new-order')" class="block w-full text-left px-3 py-2 rounded-md text-sm hover:bg-teal-50 hover:text-teal-700">
+            <i class="fas fa-plus mr-2"></i>New Order
+        </button>
+        <button onclick="showScreen('orders')" class="block w-full text-left px-3 py-2 rounded-md text-sm hover:bg-teal-50 hover:text-teal-700">
+            <i class="fas fa-list mr-2"></i>Orders
+        </button>
+        <button onclick="showScreen('dashboard')" class="block w-full text-left px-3 py-2 rounded-md text-sm hover:bg-teal-50 hover:text-teal-700">
+            <i class="fas fa-chart-line mr-2"></i>Dashboard
+        </button>
+        <button onclick="showScreen('customer-view')" class="block w-full text-left px-3 py-2 rounded-md text-sm bg-amber-100 text-amber-700">
+            <i class="fas fa-user mr-2"></i>Customer View
+        </button>
+    </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section id="screen-dashboard" class="fade-in">
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-900">Staff Dashboard</h2>
+            <p class="text-gray-500 mt-1">Overview of today's operations</p>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-teal-500">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Today's Orders</p>
+                <p class="text-3xl font-bold text-gray-900 mt-1" id="dash-today-count">0</p>
+                <i class="fas fa-shopping-bag text-teal-400 text-xl mt-2"></i>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending</p>
+                <p class="text-3xl font-bold text-gray-900 mt-1" id="dash-pending-count">0</p>
+                <i class="fas fa-clock text-amber-400 text-xl mt-2"></i>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Earnings Today</p>
+                <p class="text-3xl font-bold text-gray-900 mt-1">₦<span id="dash-earnings">0</span></p>
+                <i class="fas fa-money-bill-wave text-green-400 text-xl mt-2"></i>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Outstanding</p>
+                <p class="text-3xl font-bold text-gray-900 mt-1">₦<span id="dash-outstanding">0</span></p>
+                <i class="fas fa-exclamation-triangle text-red-400 text-xl mt-2"></i>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="rounded-xl p-6 text-white shadow-lg" style="background: linear-gradient(135deg, var(--brand), var(--brand-light))">
+                <h3 class="text-xl font-bold mb-1">New Customer Order</h3>
+                <p class="mb-4 opacity-80 text-sm">Create a new laundry or dry-cleaning order</p>
+                <button onclick="showScreen('new-order')" class="bg-white text-teal-700 px-5 py-2 rounded-lg font-semibold hover:bg-gray-100 transition text-sm shadow">
+                    <i class="fas fa-plus mr-2"></i>Create Order
+                </button>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <h3 class="text-lg font-semibold mb-3 text-gray-900">Quick Search</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="quick-search" placeholder="Order ID or Phone number..."
+                           class="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <button onclick="quickSearch()" class="brand-btn px-5 py-2 rounded-lg text-sm">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
+            <h3 class="text-base font-semibold mb-1 flex items-center">
+                <i class="fas fa-database text-teal-500 mr-2"></i>Data Backup & Restore
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">Protect your business data with regular exports.</p>
+            <div class="flex flex-wrap gap-3">
+                <button onclick="exportData()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">
+                    <i class="fas fa-download mr-2"></i>Export Backup
+                </button>
+                <label class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition cursor-pointer">
+                    <i class="fas fa-upload mr-2"></i>Import Backup
+                    <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(this)">
+                </label>
+                <button onclick="clearAllData()" class="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm hover:bg-red-100 transition">
+                    <i class="fas fa-trash-alt mr-2"></i>Clear All Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent orders table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-base font-semibold text-gray-900">Recent Orders (Today)</h3>
+                <button onclick="showScreen('orders')" class="text-teal-600 text-sm hover:underline">
+                    View All <i class="fas fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-orders-body" class="bg-white divide-y divide-gray-100 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== NEW ORDER ===== -->
+    <section id="screen-new-order" class="hidden fade-in">
+        <div class="mb-6">
+            <button onclick="showScreen('dashboard')" class="text-gray-400 hover:text-gray-600 text-sm mb-2">
+                <i class="fas fa-arrow-left mr-1"></i> Back
+            </button>
+            <h2 class="text-3xl font-bold text-gray-900">New Order</h2>
+            <p class="text-gray-500 text-sm">Fill in the customer and item details below</p>
+        </div>
+
+        <div class="max-w-4xl space-y-6">
+            <!-- Customer Info -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <h3 class="text-base font-semibold mb-4 flex items-center">
+                    <i class="fas fa-user-circle text-teal-500 mr-2"></i>Customer Information
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
+                        <input type="text" id="cust-name" required
+                               class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                               placeholder="e.g. Ibrahim Abdullahi">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                        <input type="tel" id="cust-phone" required
+                               class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                               placeholder="e.g. 08012345678">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item Selection -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <h3 class="text-base font-semibold mb-1 flex items-center">
+                    <i class="fas fa-tshirt text-teal-500 mr-2"></i>Items & Services
+                </h3>
+                <p class="text-xs text-gray-500 mb-4">Select an item, set quantity and service, then click Add.</p>
+
+                <!-- Dropdown row -->
+                <div class="flex gap-2 mb-5">
+                    <select id="item-picker"
+                        class="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white">
+                        <option value="">— Choose an item —</option>
+                    </select>
+                    <button onclick="addItemCard()"
+                        class="brand-btn px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">
+                        <i class="fas fa-plus mr-1"></i>Add
+                    </button>
+                </div>
+
+                <!-- Added item cards -->
+                <div id="item-cards" class="space-y-3"></div>
+
+                <!-- Empty state -->
+                <div id="items-empty" class="text-center py-8 text-gray-300">
+                    <i class="fas fa-tshirt text-4xl mb-2 block"></i>
+                    <p class="text-sm">No items added yet</p>
+                </div>
+
+                <!-- Total -->
+                <div class="mt-5 flex justify-end border-t border-gray-100 pt-4">
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400 uppercase font-semibold tracking-wide">Order Total</p>
+                        <p class="text-2xl font-bold text-teal-700">₦<span id="order-total">0</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collection -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <h3 class="text-base font-semibold mb-4 flex items-center">
+                    <i class="fas fa-truck text-teal-500 mr-2"></i>Collection Method
+                </h3>
+                <div class="flex gap-4 mb-4">
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="delivery-method" value="pickup" checked onchange="toggleDelivery()">
+                        <div class="mt-1 border-2 border-gray-200 rounded-lg p-3 text-center hover:border-teal-400 transition peer-checked:border-teal-500 text-sm font-medium">
+                            <i class="fas fa-store block text-xl mb-1 text-teal-500"></i>Walk-in Pickup
+                        </div>
+                    </label>
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="delivery-method" value="delivery" onchange="toggleDelivery()">
+                        <div class="mt-1 border-2 border-gray-200 rounded-lg p-3 text-center hover:border-teal-400 transition text-sm font-medium">
+                            <i class="fas fa-motorcycle block text-xl mb-1 text-amber-500"></i>Home Delivery
+                        </div>
+                    </label>
+                </div>
+                <div id="delivery-address-box" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Delivery Address *</label>
+                    <textarea id="delivery-address" rows="2"
+                              class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                              placeholder="Street, Area, Landmark..."></textarea>
+                </div>
+            </div>
+
+            <!-- Payment -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <h3 class="text-base font-semibold mb-4 flex items-center">
+                    <i class="fas fa-money-bill-wave text-teal-500 mr-2"></i>Payment
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
+                        <select id="payment-status"
+                                class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+                            <option value="unpaid">Unpaid – Pay on delivery/pickup</option>
+                            <option value="partial">Partial Payment</option>
+                            <option value="paid">Fully Paid</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Amount Paid (₦)</label>
+                        <input type="number" id="amount-paid" min="0" value="0"
+                               class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                               oninput="syncPaymentStatus()">
+                        <p id="payment-hint" class="text-xs mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                    <textarea id="order-notes" rows="2"
+                              class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                              placeholder="Special instructions, stain locations, etc."></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="submitOrder()" class="brand-btn px-8 py-3 rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition">
+                    <i class="fas fa-check mr-2"></i>Create Order
+                </button>
+                <button onclick="showScreen('dashboard')" class="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== ORDERS LIST ===== -->
+    <section id="screen-orders" class="hidden fade-in">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">All Orders</h2>
+                <p class="text-gray-500 text-sm">Manage and track all customer orders</p>
+            </div>
+            <button onclick="showScreen('new-order')" class="brand-btn px-5 py-2 rounded-lg text-sm font-medium">
+                <i class="fas fa-plus mr-2"></i>New Order
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100 flex flex-wrap gap-3">
+            <input type="text" id="search-orders" placeholder="Search name, phone, order ID..."
+                   class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                   oninput="renderOrders()">
+            <select id="filter-status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" onchange="renderOrders()">
+                <option value="">All Statuses</option>
+                <option value="received">Received</option>
+                <option value="washing">Washing</option>
+                <option value="ironing">Ironing</option>
+                <option value="ready">Ready</option>
+                <option value="delivered">Delivered</option>
+            </select>
+            <select id="filter-payment" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" onchange="renderOrders()">
+                <option value="">All Payments</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="partial">Partial</option>
+                <option value="paid">Paid</option>
+            </select>
+        </div>
+
+        <div id="orders-list" class="space-y-3"></div>
+    </section>
+
+    <!-- ===== CUSTOMER VIEW ===== -->
+    <section id="screen-customer-view" class="hidden fade-in">
+        <div class="mb-6">
+            <h2 class="text-3xl font-bold text-gray-900">Track Your Order</h2>
+            <p class="text-gray-500 text-sm">Enter your order ID or phone number to check status</p>
+        </div>
+        <div class="max-w-lg bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-6">
+            <div class="flex gap-3">
+                <input type="text" id="customer-search-input" placeholder="Order ID or Phone Number..."
+                       class="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <button onclick="customerSearch()" class="brand-btn px-5 py-2 rounded-lg text-sm">Search</button>
+            </div>
+        </div>
+        <div id="customer-results" class="space-y-4 max-w-2xl"></div>
+    </section>
+
+</main>
+
+<!-- ORDER DETAIL MODAL -->
+<div id="order-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start p-6 border-b">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900" id="modal-order-id"></h3>
+                <p class="text-sm text-gray-500" id="modal-order-date"></p>
+            </div>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl p-1">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6" id="modal-content"></div>
+        <div class="px-6 pb-6 flex flex-wrap gap-3 no-print" id="modal-actions"></div>
+    </div>
+</div>
+
+<!-- RECEIPT MODAL -->
+<div id="receipt-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-80 mx-4 p-6 text-center">
+        <div class="mb-4">
+            <div class="w-12 h-12 rounded-full mx-auto flex items-center justify-center mb-2" style="background:var(--brand)">
+                <i class="fas fa-tshirt text-white text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold" style="font-family:'DM Serif Display',serif">Plus2 Services</h3>
+            <p class="text-xs text-gray-500">Laundry & Dry Cleaning – Kano</p>
+        </div>
+        <div id="receipt-content" class="text-left text-sm border-t border-b border-gray-200 py-4 mb-4 space-y-1"></div>
+        <div class="flex gap-3 no-print">
+            <button onclick="window.print()" class="flex-1 brand-btn py-2 rounded-lg text-sm font-medium">
+                <i class="fas fa-print mr-1"></i>Print
+            </button>
+            <button onclick="closeReceipt()" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const API_URL     = 'https://script.google.com/macros/s/AKfycbwf8h0xEOz8PW5AqZlsgibDsgc57B8Z7yiW-4MErgVNUALP-t-uURV7eYagwCLOoWM5jg/exec';
+
+// ============================================================
+// DATA DEFINITIONS
+// ============================================================
+const ITEMS = [
+    { id: 'shirt',      label: 'Shirt',         wash: 100,  iron: 100,  manual: false, washOnly: false },
+    { id: 'trouser',    label: 'Trouser',        wash: 100,  iron: 100,  manual: false, washOnly: false },
+    { id: 'kaftan',     label: 'Kaftan (Set)',    wash: 200,  iron: 200,  manual: false, washOnly: false },
+    { id: 'babbarriga', label: 'Babbar Riga',     wash: 200,  iron: 200,  manual: false, washOnly: false },
+    { id: 'suit',       label: 'Suit',            wash: 300,  iron: 400,  manual: false, washOnly: false },
+    { id: 'blanket',    label: 'Blanket',         wash: null, iron: null, manual: true,  washOnly: true  },
+    { id: 'duvet',      label: 'Duvet',           wash: null, iron: null, manual: true,  washOnly: true  },
+    { id: 'bike',       label: 'Bike',            wash: null, iron: null, manual: true,  washOnly: true  },
+    { id: 'car',        label: 'Car',             wash: null, iron: null, manual: true,  washOnly: true  },
+    { id: 'cushion',    label: 'Cushion',         wash: null, iron: null, manual: true,  washOnly: true  },
+    { id: 'custom',     label: 'Other (Custom)',   wash: null, iron: null, manual: true,  washOnly: false, custom: true },
+];
+
+let orders = [];
+let currentOrderId = null;
+
+// ============================================================
+// API LAYER  – all calls go through here
+// ============================================================
+function setLoading(on, msg = 'Saving…') {
+    document.getElementById('loading-overlay').classList.toggle('hidden', !on);
+    document.getElementById('loading-msg').textContent = msg;
+}
+
+async function apiCall(body) {
+    const form = new FormData();
+    form.append('payload', JSON.stringify(body));
+
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        body: form,
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch { throw new Error('Bad response from server: ' + text.slice(0, 100)); }
+    if (!json.success) throw new Error(json.error || 'API error');
+    return json;
+}
+
+async function loadOrders() {
+    setLoading(true, 'Loading orders…');
+    try {
+        // GET request with a cache-buster so it always fetches fresh data
+        const res  = await fetch(API_URL + '?t=' + Date.now());
+        const text = await res.text();
+        let json;
+        try { json = JSON.parse(text); }
+        catch { throw new Error('Bad response: ' + text.slice(0, 100)); }
+        orders = json.orders || [];
+    } catch (e) {
+        showToast('Could not load orders: ' + e.message, 'error');
+        console.error('loadOrders error:', e);
+    } finally {
+        setLoading(false);
+    }
+}
+
+async function apiSaveOrder(order) {
+    await apiCall({ action: 'saveOrder', order });
+}
+
+async function apiUpdateOrder(order) {
+    await apiCall({ action: 'updateOrder', order });
+}
+
+async function apiDeleteOrder(orderId) {
+    await apiCall({ action: 'deleteOrder', orderId });
+}
+
+// ============================================================
+// TOAST NOTIFICATION
+// ============================================================
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    const colors = { success: 'bg-teal-700', error: 'bg-red-600', info: 'bg-gray-700' };
+    t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-xl transition-all duration-300 ${colors[type]}`;
+    t.textContent = msg;
+    t.classList.remove('opacity-0', 'pointer-events-none');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.add('opacity-0', 'pointer-events-none'), 3000);
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showScreen(screen) {
+    ['dashboard','new-order','orders','customer-view'].forEach(s => {
+        document.getElementById('screen-' + s).classList.add('hidden');
+    });
+    document.getElementById('screen-' + screen).classList.remove('hidden');
+    document.getElementById('mobile-menu').classList.add('hidden');
+
+    if (screen === 'dashboard') refreshDashboard();
+    if (screen === 'new-order') initNewOrderForm();
+    if (screen === 'orders')    renderOrders();
+}
+
+function toggleMobileMenu() {
+    document.getElementById('mobile-menu').classList.toggle('hidden');
+}
+
+// ============================================================
+// ITEMS — dropdown + card system
+// ============================================================
+
+// Tracks added items: { uid, itemId, qty, wash, iron, washPrice, ironPrice }
+let addedItems = [];
+let cardUid = 0;
+
+function initNewOrderForm() {
+    addedItems = [];
+    cardUid    = 0;
+
+    // Populate the dropdown
+    const picker = document.getElementById('item-picker');
+    picker.innerHTML = '<option value="">— Choose an item —</option>';
+    ITEMS.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value       = item.id;
+        opt.textContent = item.label + (item.washOnly ? ' (Wash Only)' : '');
+        picker.appendChild(opt);
+    });
+
+    document.getElementById('item-cards').innerHTML = '';
+    document.getElementById('items-empty').classList.remove('hidden');
+    document.getElementById('order-total').textContent = '0';
+    document.getElementById('cust-name').value   = '';
+    document.getElementById('cust-phone').value  = '';
+    document.getElementById('amount-paid').value = '0';
+    document.getElementById('order-notes').value = '';
+    document.querySelector('input[name="delivery-method"][value="pickup"]').checked = true;
+    document.getElementById('delivery-address-box').classList.add('hidden');
+    syncPaymentStatus();
+}
+
+function addItemCard() {
+    const picker = document.getElementById('item-picker');
+    const itemId = picker.value;
+    if (!itemId) { showToast('Please choose an item first.', 'info'); return; }
+
+    const item = ITEMS.find(i => i.id === itemId);
+    if (!item) return;
+
+    const uid = ++cardUid;
+    addedItems.push({ uid, itemId, qty: 1, wash: true, iron: false,
+                      washPrice: item.wash || 0, ironPrice: item.iron || 0,
+                      customLabel: '', customIronPrice: 0 });
+
+    renderItemCards();
+    picker.value = ''; // reset dropdown
+}
+
+function removeItemCard(uid) {
+    addedItems = addedItems.filter(i => i.uid !== uid);
+    renderItemCards();
+    calcTotal();
+}
+
+function renderItemCards() {
+    const container = document.getElementById('item-cards');
+    const empty     = document.getElementById('items-empty');
+
+    if (addedItems.length === 0) {
+        container.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    container.innerHTML = addedItems.map(entry => {
+        const item = ITEMS.find(i => i.id === entry.itemId);
+        if (!item) return '';
+
+        const washOnly = item.washOnly;
+
+        const isCustom = item.custom || false;
+
+        const serviceSection = isCustom
+        ? /* custom item: name + wash price + optional iron price */ `
+            <div class="flex flex-col gap-2 w-full mt-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 font-medium w-20 shrink-0">Item name</span>
+                    <input type="text" placeholder="e.g. Jalabiya, Mat..."
+                        class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                        value="${entry.customLabel || ''}"
+                        oninput="updateCard(${entry.uid}, 'customLabel', this.value)">
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-1.5 cursor-pointer select-none text-sm">
+                            <input type="checkbox" class="accent-teal-600 w-4 h-4"
+                                ${entry.wash ? 'checked' : ''}
+                                onchange="updateCard(${entry.uid}, 'wash', this.checked)">
+                            <span class="font-medium text-gray-700">Wash ₦</span>
+                        </label>
+                        <input type="number" min="0" placeholder="0"
+                            class="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                            value="${entry.washPrice || ''}"
+                            oninput="updateCard(${entry.uid}, 'washPrice', parseFloat(this.value)||0)">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-1.5 cursor-pointer select-none text-sm">
+                            <input type="checkbox" class="accent-amber-500 w-4 h-4"
+                                ${entry.iron ? 'checked' : ''}
+                                onchange="updateCard(${entry.uid}, 'iron', this.checked)">
+                            <span class="font-medium text-gray-700">Iron ₦</span>
+                        </label>
+                        <input type="number" min="0" placeholder="0"
+                            class="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                            value="${entry.customIronPrice || ''}"
+                            oninput="updateCard(${entry.uid}, 'customIronPrice', parseFloat(this.value)||0)">
+                    </div>
+                </div>
+            </div>`
+        : washOnly
+        ? /* wash-only: single price input */ `
+            <div class="flex items-center gap-3 flex-wrap">
+                <label class="flex items-center gap-1.5 cursor-pointer select-none text-sm">
+                    <input type="checkbox" class="accent-teal-600 w-4 h-4"
+                        ${entry.wash ? 'checked' : ''}
+                        onchange="updateCard(${entry.uid}, 'wash', this.checked)">
+                    <span class="font-medium text-gray-700">Wash</span>
+                </label>
+                <div class="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                    <span class="text-xs text-gray-400">₦</span>
+                    <input type="number" min="0" placeholder="Price"
+                        class="w-24 text-sm bg-transparent focus:outline-none"
+                        value="${entry.washPrice || ''}"
+                        onchange="updateCard(${entry.uid}, 'washPrice', parseFloat(this.value)||0)">
+                    <span class="text-xs text-gray-400">per job</span>
+                </div>
+            </div>`
+        : /* fixed price: wash + iron checkboxes */ `
+            <div class="flex items-center gap-4 flex-wrap">
+                <label class="flex items-center gap-1.5 cursor-pointer select-none text-sm">
+                    <input type="checkbox" class="accent-teal-600 w-4 h-4"
+                        ${entry.wash ? 'checked' : ''}
+                        onchange="updateCard(${entry.uid}, 'wash', this.checked)">
+                    <span class="font-medium text-gray-700">Wash</span>
+                    <span class="text-xs text-gray-400">(₦${item.wash})</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer select-none text-sm">
+                    <input type="checkbox" class="accent-amber-500 w-4 h-4"
+                        ${entry.iron ? 'checked' : ''}
+                        onchange="updateCard(${entry.uid}, 'iron', this.checked)">
+                    <span class="font-medium text-gray-700">Iron</span>
+                    <span class="text-xs text-gray-400">(₦${item.iron})</span>
+                </label>
+            </div>`;
+
+        const subtotal = calcEntrySubtotal(entry, item);
+
+        return `
+        <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 relative" id="card-${entry.uid}">
+            <!-- Remove button -->
+            <button onclick="removeItemCard(${entry.uid})"
+                class="absolute top-3 right-3 text-gray-300 hover:text-red-400 transition text-lg leading-none">
+                <i class="fas fa-times-circle"></i>
+            </button>
+
+            <!-- Item name + badge -->
+            <div class="flex items-center gap-2 mb-3">
+                <span class="font-semibold text-gray-800 text-sm">${isCustom ? 'Other / Custom Item' : item.label}</span>
+                ${washOnly ? '<span class="text-xs bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded font-semibold">Wash Only</span>' : ''}
+                ${isCustom ? '<span class="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">Custom</span>' : ''}
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <!-- Qty -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 font-medium">Qty</span>
+                    <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
+                        <button onclick="changeQty(${entry.uid}, -1)"
+                            class="px-3 py-1.5 text-gray-500 hover:bg-gray-100 transition font-bold text-base">−</button>
+                        <input type="number" min="1"
+                            id="qty-display-${entry.uid}"
+                            value="${entry.qty}"
+                            oninput="setQty(${entry.uid}, this.value)"
+                            class="w-12 text-center text-sm font-semibold border-none focus:outline-none focus:ring-0 bg-white py-1.5">
+                        <button onclick="changeQty(${entry.uid}, 1)"
+                            class="px-3 py-1.5 text-gray-500 hover:bg-gray-100 transition font-bold text-base">+</button>
+                    </div>
+                </div>
+
+                <!-- Service selection -->
+                ${serviceSection}
+
+                <!-- Subtotal -->
+                <div class="text-right ml-auto">
+                    <p class="text-xs text-gray-400">Subtotal</p>
+                    <p class="font-bold text-teal-700 text-sm" id="subtotal-${entry.uid}">₦${subtotal.toLocaleString()}</p>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    calcTotal();
+}
+
+function changeQty(uid, delta) {
+    const entry = addedItems.find(i => i.uid === uid);
+    if (!entry) return;
+    entry.qty = Math.max(1, entry.qty + delta);
+    // Update display without full re-render
+    const qtyEl = document.getElementById('qty-display-' + uid);
+    if (qtyEl) qtyEl.value = entry.qty;
+    const item = ITEMS.find(i => i.id === entry.itemId);
+    const subEl = document.getElementById('subtotal-' + uid);
+    if (subEl) subEl.textContent = '₦' + calcEntrySubtotal(entry, item).toLocaleString();
+    calcTotal();
+}
+
+function setQty(uid, val) {
+    const entry = addedItems.find(i => i.uid === uid);
+    if (!entry) return;
+    const qty = parseInt(val);
+    if (!qty || qty < 1) return; // wait until a valid number is typed
+    entry.qty = qty;
+    const item  = ITEMS.find(i => i.id === entry.itemId);
+    const subEl = document.getElementById('subtotal-' + uid);
+    if (subEl) subEl.textContent = '₦' + calcEntrySubtotal(entry, item).toLocaleString();
+    calcTotal();
+}
+
+function updateCard(uid, field, value) {
+    const entry = addedItems.find(i => i.uid === uid);
+    if (!entry) return;
+    entry[field] = value;
+    const item   = ITEMS.find(i => i.id === entry.itemId);
+    const subEl  = document.getElementById('subtotal-' + uid);
+    if (subEl) subEl.textContent = '₦' + calcEntrySubtotal(entry, item).toLocaleString();
+    calcTotal();
+}
+
+function calcEntrySubtotal(entry, item) {
+    const isCustom  = item.custom || false;
+    const washPrice = isCustom ? (entry.washPrice || 0)
+                    : item.washOnly ? (entry.washPrice || 0)
+                    : (item.wash || 0);
+    const ironPrice = isCustom ? (entry.customIronPrice || 0)
+                    : item.washOnly ? 0
+                    : (item.iron || 0);
+    let sub = 0;
+    if (entry.wash) sub += entry.qty * washPrice;
+    if (entry.iron) sub += entry.qty * ironPrice;
+    return sub;
+}
+
+function syncPaymentStatus() {
+    const totalEl = document.getElementById('order-total');
+    const paidEl  = document.getElementById('amount-paid');
+    const select  = document.getElementById('payment-status');
+    const hint    = document.getElementById('payment-hint');
+
+    if (!totalEl || !paidEl || !select) return;
+
+    const total = parseFloat(totalEl.textContent.replace(/,/g, '')) || 0;
+    const paid  = parseFloat(paidEl.value) || 0;
+
+    // Auto-correct dropdown
+    if (total > 0 && paid >= total)    select.value = 'paid';
+    else if (paid > 0 && paid < total) select.value = 'partial';
+    else                               select.value = 'unpaid';
+
+    // Update hint text
+    if (!hint) return;
+    hint.classList.remove('hidden', 'text-green-600', 'text-amber-600', 'text-gray-400');
+    if (total === 0) {
+        hint.classList.add('hidden');
+    } else if (paid >= total) {
+        hint.textContent = '✓ Fully paid';
+        hint.classList.add('text-green-600');
+    } else if (paid > 0) {
+        hint.textContent = 'Balance remaining: ₦' + (total - paid).toLocaleString();
+        hint.classList.add('text-amber-600');
+    } else {
+        hint.textContent = 'Full amount: ₦' + total.toLocaleString();
+        hint.classList.add('text-gray-400');
+    }
+}
+
+function calcTotal() {
+    let total = 0;
+    addedItems.forEach(entry => {
+        const item = ITEMS.find(i => i.id === entry.itemId);
+        if (item) total += calcEntrySubtotal(entry, item);
+    });
+    document.getElementById('order-total').textContent = total.toLocaleString();
+    syncPaymentStatus();
+}
+
+// ============================================================
+// BUILD ORDER ITEMS SNAPSHOT
+// ============================================================
+function getOrderItems() {
+    const items = [];
+    addedItems.forEach(entry => {
+        const item = ITEMS.find(i => i.id === entry.itemId);
+        if (!item) return;
+        const isCustom  = item.custom || false;
+        const label     = isCustom ? (entry.customLabel.trim() || 'Custom Item') : item.label;
+        const washPrice = isCustom ? (entry.washPrice || 0)
+                        : item.washOnly ? (entry.washPrice || 0)
+                        : (item.wash || 0);
+        const ironPrice = isCustom ? (entry.customIronPrice || 0)
+                        : item.washOnly ? 0
+                        : (item.iron || 0);
+        const subtotal  = calcEntrySubtotal(entry, item);
+        if (subtotal === 0 && !entry.wash && !entry.iron) return;
+        items.push({
+            id:        item.id,
+            label,
+            qty:       entry.qty,
+            wash:      entry.wash,
+            iron:      entry.iron,
+            washPrice: entry.wash ? washPrice : 0,
+            ironPrice: entry.iron ? ironPrice : 0,
+            subtotal,
+        });
+    });
+    return items;
+}
+
+// ============================================================
+// SUBMIT ORDER
+// ============================================================
+// SUBMIT ORDER
+// ============================================================
+async function submitOrder() {
+    const name  = document.getElementById('cust-name').value.trim();
+    const phone = document.getElementById('cust-phone').value.trim();
+    if (!name || !phone) { showToast('Please enter customer name and phone.', 'error'); return; }
+
+    const items = getOrderItems();
+    if (items.length === 0) { showToast('Please add at least one item with a service selected.', 'error'); return; }
+
+    const total     = items.reduce((s, i) => s + i.subtotal, 0);
+    const amtPaid   = parseFloat(document.getElementById('amount-paid').value) || 0;
+    const payStatus = document.getElementById('payment-status').value;
+    const method    = document.querySelector('input[name="delivery-method"]:checked').value;
+    const address   = document.getElementById('delivery-address').value.trim();
+    const notes     = document.getElementById('order-notes').value.trim();
+    const orderId   = 'P2-' + Date.now().toString().slice(-6);
+    const now       = new Date().toISOString();
+
+    const order = {
+        id: orderId,
+        customer: { name, phone },
+        items, total,
+        amountPaid: amtPaid,
+        paymentStatus: payStatus,
+        deliveryMethod: method,
+        deliveryAddress: address,
+        notes,
+        status: 'received',
+        createdAt: now,
+        updatedAt: now,
+    };
+
+    setLoading(true, 'Saving order…');
+    try {
+        await apiSaveOrder(order);
+        orders.unshift(order);
+        showToast('Order saved! ✓');
+        showScreen('orders');
+        setTimeout(() => openOrderModal(orderId), 300);
+    } catch (e) {
+        showToast('Failed to save order. Try again.', 'error');
+    } finally {
+        setLoading(false);
+    }
+}
+
+// ============================================================
+// RENDER ORDERS
+// ============================================================
+function renderOrders() {
+    const search      = document.getElementById('search-orders')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('filter-status')?.value || '';
+    const payFilter   = document.getElementById('filter-payment')?.value || '';
+
+    const filtered = orders.filter(o => {
+        const matchSearch = !search
+            || o.customer.name.toLowerCase().includes(search)
+            || o.customer.phone.includes(search)
+            || o.id.toLowerCase().includes(search);
+        const matchStatus = !statusFilter || o.status === statusFilter;
+        const matchPay    = !payFilter    || o.paymentStatus === payFilter;
+        return matchSearch && matchStatus && matchPay;
+    });
+
+    const list = document.getElementById('orders-list');
+    if (!list) return;
+
+    if (filtered.length === 0) {
+        list.innerHTML = `<div class="text-center py-16 text-gray-400">
+            <i class="fas fa-box-open text-4xl mb-3 block"></i>
+            <p class="font-medium">No orders found</p>
+        </div>`;
+        return;
+    }
+
+    list.innerHTML = filtered.map(o => `
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition cursor-pointer" onclick="openOrderModal('${o.id}')">
+            <div class="flex flex-wrap justify-between items-start gap-3">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-bold text-gray-900">${o.customer.name}</span>
+                        <span class="text-xs text-gray-400">${o.customer.phone}</span>
+                    </div>
+                    <div class="text-xs text-gray-500">${o.id} · ${formatDate(o.createdAt)}</div>
+                    <div class="text-xs text-gray-600 mt-1">${o.items.map(i => i.label + ' ×' + i.qty).join(', ')}</div>
+                </div>
+                <div class="text-right flex flex-col gap-1 items-end">
+                    <span class="status-badge status-${o.status}">${statusLabel(o.status)}</span>
+                    <span class="status-badge status-${o.paymentStatus === 'paid' ? 'delivered' : o.paymentStatus === 'partial' ? 'ironing' : 'unpaid'}">${payLabel(o.paymentStatus)}</span>
+                    <span class="font-bold text-teal-700">₦${o.total.toLocaleString()}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ============================================================
+// ORDER MODAL
+// ============================================================
+function openOrderModal(orderId) {
+    const o = orders.find(x => x.id === orderId);
+    if (!o) return;
+    currentOrderId = orderId;
+
+    document.getElementById('modal-order-id').textContent   = `Order ${o.id}`;
+    document.getElementById('modal-order-date').textContent = formatDate(o.createdAt);
+
+    const content = document.getElementById('modal-content');
+    content.innerHTML = `
+        <div class="grid grid-cols-2 gap-6 mb-6">
+            <div>
+                <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Customer</p>
+                <p class="font-semibold">${o.customer.name}</p>
+                <p class="text-sm text-gray-500">${o.customer.phone}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Status</p>
+                <span class="status-badge status-${o.status}">${statusLabel(o.status)}</span><br>
+                <span class="status-badge status-${o.paymentStatus === 'paid' ? 'delivered' : o.paymentStatus === 'partial' ? 'ironing' : 'unpaid'} mt-1 inline-block">${payLabel(o.paymentStatus)}</span>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Items</p>
+            <table class="w-full text-sm">
+                <thead><tr class="text-xs text-gray-400 border-b">
+                    <th class="text-left pb-1">Item</th>
+                    <th class="text-center pb-1">Qty</th>
+                    <th class="text-center pb-1">Services</th>
+                    <th class="text-right pb-1">Subtotal</th>
+                </tr></thead>
+                <tbody class="divide-y divide-gray-50">
+                    ${o.items.map(i => `
+                    <tr>
+                        <td class="py-2 font-medium">${i.label}</td>
+                        <td class="py-2 text-center">${i.qty}</td>
+                        <td class="py-2 text-center text-xs text-gray-500">
+                            ${i.wash ? 'Wash ₦' + i.washPrice : ''}${i.wash && i.iron ? ' + ' : ''}${i.iron ? 'Iron ₦' + i.ironPrice : ''}
+                        </td>
+                        <td class="py-2 text-right font-semibold">₦${i.subtotal.toLocaleString()}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bg-gray-50 rounded-xl p-4 text-sm space-y-1 mb-4">
+            <div class="flex justify-between"><span class="text-gray-500">Collection</span><span class="font-medium">${o.deliveryMethod === 'delivery' ? 'Home Delivery' : 'Walk-in Pickup'}</span></div>
+            ${o.deliveryAddress ? `<div class="flex justify-between"><span class="text-gray-500">Address</span><span class="font-medium text-right max-w-48">${o.deliveryAddress}</span></div>` : ''}
+            <div class="flex justify-between"><span class="text-gray-500">Total</span><span class="font-bold text-teal-700">₦${o.total.toLocaleString()}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">Paid</span><span class="font-medium text-green-600">₦${o.amountPaid.toLocaleString()}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">Balance</span>
+                <span class="font-bold ${o.total - o.amountPaid > 0 ? 'text-red-500' : 'text-green-600'}">
+                    ₦${(o.total - o.amountPaid).toLocaleString()}
+                </span>
+            </div>
+            ${o.notes ? `<div class="flex justify-between"><span class="text-gray-500">Notes</span><span class="font-medium">${o.notes}</span></div>` : ''}
+        </div>
+
+        <div class="mb-3">
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Update Status</p>
+            <div class="flex flex-wrap gap-2">
+                ${['received','washing','ironing','ready','delivered'].map(s => `
+                <button onclick="updateStatus('${o.id}','${s}')"
+                    class="px-3 py-1 rounded-lg text-xs font-semibold border ${o.status === s ? 'bg-teal-600 text-white border-teal-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}">
+                    ${statusLabel(s)}
+                </button>`).join('')}
+            </div>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Update Payment</p>
+            <div class="flex flex-wrap gap-2 items-center">
+                ${['unpaid','partial','paid'].map(p => `
+                <button onclick="updatePayment('${o.id}','${p}')"
+                    class="px-3 py-1 rounded-lg text-xs font-semibold border ${o.paymentStatus === p ? 'bg-amber-500 text-white border-amber-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}">
+                    ${payLabel(p)}
+                </button>`).join('')}
+                <input type="number" id="modal-payment-amount" placeholder="Amount paid"
+                    class="border border-gray-200 rounded-lg px-3 py-1 text-xs w-32 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                    value="${o.amountPaid}">
+                <button onclick="updateAmountPaid('${o.id}')" class="px-3 py-1 rounded-lg text-xs font-semibold brand-btn">Update ₦</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('modal-actions').innerHTML = `
+        <button onclick="showReceipt('${o.id}')" class="brand-btn px-4 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-receipt mr-1"></i>Print Receipt
+        </button>
+        <button onclick="deleteOrder('${o.id}')" class="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm hover:bg-red-100">
+            <i class="fas fa-trash mr-1"></i>Delete
+        </button>
+        <button onclick="closeModal()" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 ml-auto">
+            Close
+        </button>
+    `;
+
+    document.getElementById('order-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('order-modal').classList.add('hidden');
+    currentOrderId = null;
+}
+
+async function updateStatus(id, status) {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    o.status    = status;
+    o.updatedAt = new Date().toISOString();
+    setLoading(true, 'Updating…');
+    try {
+        await apiUpdateOrder(o);
+        showToast('Status updated ✓');
+    } catch { showToast('Update failed. Try again.', 'error'); }
+    finally  { setLoading(false); }
+    openOrderModal(id);
+    refreshDashboard();
+}
+
+async function updatePayment(id, status) {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    o.paymentStatus = status;
+    if (status === 'paid')   o.amountPaid = o.total;
+    if (status === 'unpaid') o.amountPaid = 0;
+    o.updatedAt = new Date().toISOString();
+    setLoading(true, 'Updating…');
+    try {
+        await apiUpdateOrder(o);
+        showToast('Payment updated ✓');
+    } catch { showToast('Update failed. Try again.', 'error'); }
+    finally  { setLoading(false); }
+    openOrderModal(id);
+    refreshDashboard();
+}
+
+async function updateAmountPaid(id) {
+    const o   = orders.find(x => x.id === id);
+    if (!o) return;
+    const val = parseFloat(document.getElementById('modal-payment-amount').value) || 0;
+    o.amountPaid    = val;
+    o.paymentStatus = val >= o.total ? 'paid' : val > 0 ? 'partial' : 'unpaid';
+    o.updatedAt     = new Date().toISOString();
+    setLoading(true, 'Updating…');
+    try {
+        await apiUpdateOrder(o);
+        showToast('Payment updated ✓');
+    } catch { showToast('Update failed. Try again.', 'error'); }
+    finally  { setLoading(false); }
+    openOrderModal(id);
+    refreshDashboard();
+}
+
+async function deleteOrder(id) {
+    if (!confirm('Delete this order? This cannot be undone.')) return;
+    setLoading(true, 'Deleting…');
+    try {
+        await apiDeleteOrder(id);
+        orders = orders.filter(x => x.id !== id);
+        showToast('Order deleted.');
+        closeModal();
+        renderOrders();
+        refreshDashboard();
+    } catch { showToast('Delete failed. Try again.', 'error'); }
+    finally  { setLoading(false); }
+}
+
+// ============================================================
+// RECEIPT
+// ============================================================
+function showReceipt(id) {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+
+    document.getElementById('receipt-content').innerHTML = `
+        <div class="flex justify-between text-xs text-gray-500 mb-2">
+            <span>${o.id}</span><span>${formatDate(o.createdAt)}</span>
+        </div>
+        <div class="mb-2 text-xs"><strong>${o.customer.name}</strong> · ${o.customer.phone}</div>
+        <div class="border-t pt-2 mb-2">
+            ${o.items.map(i => `
+            <div class="flex justify-between">
+                <span>${i.label} ×${i.qty} (${[i.wash?'Wash':'',i.iron?'Iron':''].filter(Boolean).join('+')})</span>
+                <span>₦${i.subtotal.toLocaleString()}</span>
+            </div>`).join('')}
+        </div>
+        <div class="border-t pt-2 space-y-1">
+            <div class="flex justify-between font-bold"><span>Total</span><span>₦${o.total.toLocaleString()}</span></div>
+            <div class="flex justify-between text-xs"><span>Paid</span><span>₦${o.amountPaid.toLocaleString()}</span></div>
+            <div class="flex justify-between text-xs"><span>Balance</span><span>₦${(o.total - o.amountPaid).toLocaleString()}</span></div>
+        </div>
+        <p class="text-center text-xs text-gray-400 mt-3">Thank you for choosing Plus2 Services!</p>
+    `;
+    document.getElementById('receipt-modal').classList.remove('hidden');
+}
+
+function closeReceipt() {
+    document.getElementById('receipt-modal').classList.add('hidden');
+}
+
+// ============================================================
+// CUSTOMER VIEW
+// ============================================================
+function customerSearch() {
+    const q       = document.getElementById('customer-search-input').value.trim().toLowerCase();
+    const results = document.getElementById('customer-results');
+    if (!q) { results.innerHTML = ''; return; }
+
+    const found = orders.filter(o =>
+        o.id.toLowerCase() === q ||
+        o.customer.phone.includes(q) ||
+        o.customer.name.toLowerCase().includes(q)
+    );
+
+    if (found.length === 0) {
+        results.innerHTML = `<div class="text-gray-400 text-center py-8">
+            <i class="fas fa-search text-3xl mb-2 block"></i>No orders found</div>`;
+        return;
+    }
+
+    results.innerHTML = found.map(o => `
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex justify-between mb-3">
+                <div>
+                    <p class="font-bold">${o.customer.name}</p>
+                    <p class="text-xs text-gray-400">${o.id} · ${formatDate(o.createdAt)}</p>
+                </div>
+                <span class="status-badge status-${o.status} self-start">${statusLabel(o.status)}</span>
+            </div>
+            <div class="text-sm text-gray-600 mb-3">${o.items.map(i => i.label + ' ×' + i.qty).join(', ')}</div>
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Total: <strong class="text-teal-700">₦${o.total.toLocaleString()}</strong></span>
+                <span class="${o.amountPaid >= o.total ? 'text-green-600' : 'text-red-500'} font-medium">
+                    ${o.amountPaid >= o.total ? '✓ Paid' : 'Balance: ₦' + (o.total - o.amountPaid).toLocaleString()}
+                </span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function refreshDashboard() {
+    const today       = new Date().toDateString();
+    const todayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === today);
+    const pending     = orders.filter(o => o.status !== 'delivered').length;
+    const earnings    = todayOrders.filter(o => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0);
+    const outstanding = orders.reduce((s, o) => s + Math.max(0, o.total - o.amountPaid), 0);
+
+    document.getElementById('dash-today-count').textContent  = todayOrders.length;
+    document.getElementById('dash-pending-count').textContent = pending;
+    document.getElementById('dash-earnings').textContent      = earnings.toLocaleString();
+    document.getElementById('dash-outstanding').textContent   = outstanding.toLocaleString();
+
+    const tbody  = document.getElementById('recent-orders-body');
+    if (!tbody) return;
+    const recent = todayOrders.slice(0, 5);
+
+    tbody.innerHTML = recent.length === 0
+        ? `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400 text-sm">No orders today</td></tr>`
+        : recent.map(o => `
+            <tr class="hover:bg-gray-50 cursor-pointer" onclick="openOrderModal('${o.id}')">
+                <td class="px-6 py-3 text-sm font-medium text-teal-600">${o.id}</td>
+                <td class="px-6 py-3 text-sm">${o.customer.name}</td>
+                <td class="px-6 py-3"><span class="status-badge status-${o.status}">${statusLabel(o.status)}</span></td>
+                <td class="px-6 py-3 text-sm font-semibold">₦${o.total.toLocaleString()}</td>
+                <td class="px-6 py-3"><button class="text-teal-500 text-xs hover:underline">View</button></td>
+            </tr>`).join('');
+}
+
+// ============================================================
+// SEARCH & HELPERS
+// ============================================================
+function quickSearch() {
+    const q = document.getElementById('quick-search').value.trim();
+    if (!q) return;
+    document.getElementById('customer-search-input').value = q;
+    showScreen('customer-view');
+    customerSearch();
+}
+
+function statusLabel(s) {
+    return { received: 'Received', washing: 'Washing', ironing: 'Ironing', ready: 'Ready', delivered: 'Delivered' }[s] || s;
+}
+function payLabel(p) {
+    return { paid: 'Paid', partial: 'Part-paid', unpaid: 'Unpaid' }[p] || p;
+}
+function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
+         + ' ' + d.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ============================================================
+// BACKUP (export/import still works as a local JSON safety net)
+// ============================================================
+function exportData() {
+    const blob = new Blob([JSON.stringify(orders, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'plus2-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async e => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) throw new Error();
+            if (!confirm(`Import ${data.length} orders from this backup? This will not delete existing orders in Google Sheets — it will add these on top.`)) return;
+            setLoading(true, 'Importing…');
+            for (const order of data) {
+                await apiSaveOrder(order);
+                orders.unshift(order);
+            }
+            refreshDashboard();
+            showToast(`Imported ${data.length} orders ✓`);
+        } catch {
+            showToast('Invalid backup file.', 'error');
+        } finally {
+            setLoading(false);
+            input.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
+function clearAllData() {
+    showToast('To clear data, delete rows directly in your Google Sheet.', 'info');
+}
+
+// ============================================================
+// INIT — load from Google Sheets then show dashboard
+// ============================================================
+async function init() {
+    await loadOrders();
+    showScreen('dashboard');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay" class="hidden fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl px-8 py-6 flex flex-col items-center gap-3">
+            <svg class="animate-spin h-8 w-8 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+            <p id="loading-msg" class="text-sm font-semibold text-gray-700">Loading…</p>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 bg-teal-700"></div>
+
+</body>
+</html>
